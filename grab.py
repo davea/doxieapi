@@ -14,6 +14,10 @@ class DoxieScanner:
         self.uid = uid
 
     def __str__(self):
+        """
+        >>> str(DoxieScanner("http://192.168.100.1:8080/", "uuid:a-b-c::urn:schemas-getdoxie-com:device:Scanner:1"))
+        'Doxie Scanner uuid:a-b-c::urn:schemas-getdoxie-com:device:Scanner:1 at http://192.168.100.1:8080/'
+        """
         return "Doxie Scanner {} at {}".format(self.uid, self.url)
 
     @classmethod
