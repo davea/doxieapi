@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
 from configparser import ConfigParser
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse, urljoin
 
 import requests
 
@@ -11,7 +11,7 @@ DOXIE_SSDP_SERVICE = "urn:schemas-getdoxie-com:device:Scanner:1"
 
 class DoxieScanner:
     url = None
-    username = "doxie"
+    username = "doxie" # This is always the same according to API docs
     password = None
 
     # These attributes will be populated by _load_hello_attributes
@@ -60,8 +60,7 @@ class DoxieScanner:
         >>> DoxieScanner("http://192.168.100.1:8080/", load_attributes=False)._api_url("/networks/available.json")
         'http://192.168.100.1:8080/networks/available.json'
         """
-        scheme, netloc, _, _, _, _ = urlparse(self.url)
-        return urlunparse((scheme, netloc, path, '', '', ''))
+        return urljoin(self.url, path)
 
     def _api_call(self, path, return_json=True):
         """
@@ -71,13 +70,29 @@ class DoxieScanner:
         Call with return_json=False to skip the JSON parsing step.
         """
         url = self._api_url(path)
-        auth = (self.username, self.password) if self.password is not None else None
-        response = requests.get(url, auth=auth)
-        if response.status_code != requests.codes.ok:
-            response.raise_for_status()
+        response = self._get_url(url)
         return response.json() if return_json else None
 
+    def _get_url(self, url, stream=False):
+        """
+        Performs a GET to a URL, including authentication
+        if self.password is set.
+        Checks that the response status code is 200 before
+        returning the response.
+        """
+        auth = (self.username, self.password) if self.password is not None else None
+        response = requests.get(url, auth=auth, stream=stream)
+        if response.status_code != requests.codes.ok:
+            response.raise_for_status()
+        return response
+
     def _load_hello_attributes(self):
+        """
+        Sets the values from the 'hello' API call as attributes
+        on this DoxieScanner instance.
+        If a password is required, it's loaded from the INI
+        file by _load_password()
+        """
         attributes = self._api_call("/hello.json")
         self.model = attributes['model']
         self.name = attributes['name']
@@ -104,12 +119,23 @@ class DoxieScanner:
 
     @property
     def firmware(self):
+        """
+        Fetches and caches the 'firmware' string from the 'hello_extra' API call.
+        This call is expensive and the value isn't going to change, so
+        we're fine to cache it for the lifetime of this DoxieScanner instance.
+        """
         if self._firmware is None:
             self._firmware = self._api_call("/hello_extra.json")['firmware']
         return self._firmware
 
     @property
     def connected_to_external_power(self):
+        """
+        Returns True if the scanner is connected to AC power.
+        This uses the 'hello_extra' API call which is expensive according to
+        the docs.
+        Doesn't cache the value as it might change.
+        """
         attributes = self._api_call("/hello_extra.json")
         # hello_extra is an expensive call so might as well
         # cache the firmware version while we're here...
@@ -118,14 +144,38 @@ class DoxieScanner:
 
     @property
     def scans(self):
+        """
+        Returns a list of scans available on the Doxie
+        """
         return self._api_call("/scans.json")
 
     def restart_wifi(self):
+        """
+        Restarts the wifi on the Doxie
+        """
         self._api_call("/restart.json", return_json=False)
+
+    def download_scan(self, path, size, output_dir):
+        """
+        Downloads a scan at the given path to the given local dir,
+        preserving the filename.
+        Will overwrite the target file if it exists.
+        """
+        if not path.startswith("/scans"):
+            path = "/scans{}".format(path)
+        url = self._api_url(path)
+        response = self._get_url(url, stream=True)
+        output_path = os.path.join(output_dir, os.path.basename(path))
+        with open(output_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024*8):
+                f.write(chunk)
 
 def main():
     for doxie in DoxieScanner.discover():
-        print("Discovered {}, {} scans available.".format(doxie, len(doxie.scans)))
+        print("Discovered {}.".format(doxie))
+        for scan in doxie.scans:
+            print("Downloading {}".format(scan['name']))
+            doxie.download_scan(scan['name'], scan['size'], "/tmp")
 
 if __name__ == '__main__':
     main()
