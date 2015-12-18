@@ -11,10 +11,3 @@ def execute_tests(*args):
     fn += args[1:]
     print(" ".join(fn))
     return call(fn) == 0
-
-@runnable
-def execute_script(*args):
-    fn = [ 'python', 'doxieapi.py' ]
-    fn += args[1:]
-    print(" ".join(fn))
-    return call(fn) == 0
