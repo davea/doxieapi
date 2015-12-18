@@ -178,6 +178,9 @@ class DoxieScanner:
         return output_files
 
 def main():
+    """
+    Grab all available scan images and save them to /tmp
+    """
     for doxie in DoxieScanner.discover():
         print("Discovered {}.".format(doxie))
         print(doxie.download_scans("/tmp"))
