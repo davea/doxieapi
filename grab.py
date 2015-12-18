@@ -155,7 +155,7 @@ class DoxieScanner:
         """
         self._api_call("/restart.json", return_json=False)
 
-    def download_scan(self, path, size, output_dir):
+    def download_scan(self, path, output_dir):
         """
         Downloads a scan at the given path to the given local dir,
         preserving the filename.
@@ -169,13 +169,18 @@ class DoxieScanner:
         with open(output_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=1024*8):
                 f.write(chunk)
+        return output_path
+
+    def download_scans(self, output_dir):
+        output_files = []
+        for scan in self.scans:
+            output_files.append(self.download_scan(scan['name'], output_dir))
+        return output_files
 
 def main():
     for doxie in DoxieScanner.discover():
         print("Discovered {}.".format(doxie))
-        for scan in doxie.scans:
-            print("Downloading {}".format(scan['name']))
-            doxie.download_scan(scan['name'], scan['size'], "/tmp")
+        print(doxie.download_scans("/tmp"))
 
 if __name__ == '__main__':
     main()
