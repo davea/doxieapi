@@ -49,6 +49,16 @@ class DoxieScanner:
         """
         return "Doxie model {} ({}) at {}".format(self.model, self.name, self.url)
 
+    def __repr__(self):
+        """
+        >>> doxie = DoxieScanner("http://192.168.100.1:8080/", load_attributes=False)
+        >>> doxie.name = "Doxie_00AAFF"
+        >>> doxie.model = "DX250"
+        >>> str(doxie)
+        '<DoxieScanner: Doxie model DX250 (Doxie_00AAFF) at http://192.168.100.1:8080/>'
+        """
+        return "<DoxieScanner: {}>".format(str(self))
+
     @classmethod
     def discover(cls):
         """
