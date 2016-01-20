@@ -1,6 +1,13 @@
 import os
-from configparser import ConfigParser
-from urllib.parse import urlparse, urlunparse, urljoin
+try:
+    from configparser import ConfigParser
+except ImportError:
+    # We're on Python 2
+    from ConfigParser import ConfigParser
+try:
+    from urllib.parse import urlparse, urlunparse, urljoin
+except ImportError:
+    from urlparse import urlparse, urlunparse, urljoin
 
 import requests
 
