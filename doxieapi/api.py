@@ -1,13 +1,15 @@
-#!/usr/bin/env python3
 import os
 from configparser import ConfigParser
 from urllib.parse import urlparse, urlunparse, urljoin
 
 import requests
 
-from ssdp import discover as ssdp_discover
+from . import ssdp
 
 DOXIE_SSDP_SERVICE = "urn:schemas-getdoxie-com:device:Scanner:1"
+
+# Scans are downloaded in chunks of this many bytes:
+DOWNLOAD_CHUNK_SIZE = 1024*8
 
 class DoxieScanner:
     url = None
@@ -44,10 +46,10 @@ class DoxieScanner:
     def discover(cls):
         """
         Return a list of DoxieScanner instances, one per device found via
-        SSDP. Password is taken from DOXIE_PASSWORD environment var, if set.
+        SSDP.
         """
         doxies = []
-        for response in ssdp_discover(DOXIE_SSDP_SERVICE):
+        for response in ssdp.discover(DOXIE_SSDP_SERVICE):
             scheme, netloc, _, _, _, _ = urlparse(response.location)
             url = urlunparse((scheme, netloc, '/', '', '', ''))
             doxies.append(DoxieScanner(url))
@@ -106,10 +108,10 @@ class DoxieScanner:
 
     def _load_password(self):
         """
-        Load the password for this Doxie's MAC address from ~/.doxiegrabber.ini,
-        or another path specified by the DOXIEGRABBER_CONFIG_PATH env variable
+        Load the password for this Doxie's MAC address from ~/.doxieapi.ini,
+        or another path specified by the DOXIEAPI_CONFIG_PATH env variable
         """
-        config_path = os.path.expanduser(os.environ.get("DOXIEGRABBER_CONFIG_PATH", "~/.doxiegrabber.ini"))
+        config_path = os.path.expanduser(os.environ.get("DOXIEAPI_CONFIG_PATH", "~/.doxieapi.ini"))
         config = ConfigParser()
         config.read(config_path)
         try:
@@ -149,6 +151,13 @@ class DoxieScanner:
         """
         return self._api_call("/scans.json")
 
+    @property
+    def recent(self):
+        """
+        Returns the path of the most recent scan available on the Doxie
+        """
+        return self._api_call("/scans/recent.json")['path']
+
     def restart_wifi(self):
         """
         Restarts the wifi on the Doxie
@@ -159,31 +168,26 @@ class DoxieScanner:
         """
         Downloads a scan at the given path to the given local dir,
         preserving the filename.
-        Will overwrite the target file if it exists.
+        Will raise an exception if the target file already exists.
         """
         if not path.startswith("/scans"):
             path = "/scans{}".format(path)
         url = self._api_url(path)
         response = self._get_url(url, stream=True)
         output_path = os.path.join(output_dir, os.path.basename(path))
+        if os.path.isfile(output_path):
+            raise FileExistsError(output_path)
         with open(output_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024*8):
+            for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                 f.write(chunk)
         return output_path
 
     def download_scans(self, output_dir):
+        """
+        Downloads all available scans from this Doxie to the specified dir,
+        preserving the filenames from the scanner.
+        """
         output_files = []
         for scan in self.scans:
             output_files.append(self.download_scan(scan['name'], output_dir))
         return output_files
-
-def main():
-    """
-    Grab all available scan images and save them to /tmp
-    """
-    for doxie in DoxieScanner.discover():
-        print("Discovered {}.".format(doxie))
-        print(doxie.download_scans("/tmp"))
-
-if __name__ == '__main__':
-    main()
