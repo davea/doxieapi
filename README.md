@@ -3,6 +3,14 @@
 A Python library for the [developer API](http://help.getdoxie.com/doxiego/advanced/wifi/api/)
 of the [Doxie Go Wi-Fi](http://www.getdoxie.com/product/doxie-go/) document scanner.
 
+## Installation
+
+doxieapi is available on PyPI: https://pypi.python.org/pypi/doxieapi. Install with pip:
+
+```sh
+$ pip install doxieapi
+```
+
 ## Usage
 
 Doxie scanners on the network can discovered automatically using SSDP:
@@ -21,7 +29,8 @@ Recent and all scans can be listed:
 >>> scanner.recent
 '/DOXIE/JPEG/IMG_0074.JPG'
 >>> scanner.scans[:2]
-[{'modified': '2010-05-01 00:17:28', 'name': '/DOXIE/JPEG/IMG_0001.JPG', 'size': 1365552}, {'modified': '2010-05-01 00:17:44', 'name': '/DOXIE/JPEG/IMG_0002.JPG', 'size': 1362595}]
+[{'modified': '2010-05-01 00:17:28', 'name': '/DOXIE/JPEG/IMG_0001.JPG', 'size': 1365552},
+{'modified': '2010-05-01 00:17:44', 'name': '/DOXIE/JPEG/IMG_0002.JPG', 'size': 1362595}]
 ```
 
 Scans can be downloaded individually or all at once:
