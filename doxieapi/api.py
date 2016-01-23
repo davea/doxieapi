@@ -1,4 +1,6 @@
 import os
+import time
+import json
 try:
     from configparser import ConfigParser
 except ImportError:
@@ -99,11 +101,17 @@ class DoxieScanner:
         Checks that the response status code is 200 before
         returning the response.
         """
-        auth = (self.username, self.password) if self.password is not None else None
-        response = requests.get(url, auth=auth, stream=stream)
+        response = requests.get(url, auth=self._get_auth(), stream=stream)
         if response.status_code != requests.codes.ok:
             response.raise_for_status()
         return response
+
+    def _get_auth(self):
+        """
+        Returns a (username, password) tuple if self.password is set, otherwise None.
+        Suitable for passing to requests' 'auth' kwarg.
+        """
+        return (self.username, self.password) if self.password is not None else None
 
     def _load_hello_attributes(self):
         """
@@ -171,7 +179,9 @@ class DoxieScanner:
     @property
     def recent(self):
         """
-        Returns the path of the most recent scan available on the Doxie
+        Returns the path of the most recent scan available on the Doxie.
+        This seems to be cached on the Doxie and may refer to a scan
+        which has subsequently been deleted.
         """
         return self._api_call("/scans/recent.json")['path']
 
@@ -186,6 +196,7 @@ class DoxieScanner:
         Downloads a scan at the given path to the given local dir,
         preserving the filename.
         Will raise an exception if the target file already exists.
+        Returns the path of the downloaded file.
         """
         if not path.startswith("/scans"):
             path = "/scans{}".format(path)
@@ -203,8 +214,57 @@ class DoxieScanner:
         """
         Downloads all available scans from this Doxie to the specified dir,
         preserving the filenames from the scanner.
+        Returns a list of the downloaded files.
         """
         output_files = []
         for scan in self.scans:
             output_files.append(self.download_scan(scan['name'], output_dir))
         return output_files
+
+    def delete_scan(self, path, retries=3, timeout=5):
+        """
+        Deletes a scan from the Doxie.
+        This method may be slow; from the API docs:
+           Deleting takes several seconds because a lock on the internal storage
+           must be obtained and released. Deleting may fail if the lock cannot
+           be obtained (e.g., the scanner is busy), so consider retrying on
+           failure conditions.
+        This method will attempt the deletion multiple times with a timeout
+        between attempts - controlled by the retries and timeout (seconds) params.
+        Returns a boolean indicating whether the deletion was successful.
+        """
+        if not path.startswith("/scans"):
+            path = "/scans{}".format(path)
+        url = self._api_url(path)
+        auth = self._get_auth()
+        for attempt in range(retries):
+            response = requests.delete(url, auth=auth)
+            if response.status_code == requests.codes.no_content:
+                return True
+            if attempt < retries-1:
+                time.sleep(timeout)
+        return False
+
+    def delete_scans(self, paths, retries=3, timeout=5):
+        """
+        Deletes multiple scans from the Doxie.
+        This method may be slow; from the API docs:
+           Deleting takes several seconds because a lock on the internal storage
+           must be obtained and released. Deleting may fail if the lock cannot
+           be obtained (e.g., the scanner is busy), so consider retrying on
+           failure conditions.
+        This method will attempt the deletion multiple times with a timeout
+        between attempts - controlled by the retries and timeout (seconds) params.
+        Returns a boolean indicating whether the deletion was successful.
+        The deletion is considered successful by the Doxie if at least one scan
+        was deleted, it seems.
+        """
+        url = self._api_url("/scans/delete.json")
+        auth = self._get_auth()
+        for attempt in range(retries):
+            response = requests.post(url, auth=auth, data=json.dumps(paths))
+            if response.status_code == requests.codes.no_content:
+                return True
+            if attempt < retries-1:
+                time.sleep(timeout)
+        return False
