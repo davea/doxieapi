@@ -42,6 +42,15 @@ Scans can be downloaded individually or all at once:
 ['/tmp/IMG_0001.JPG', '/tmp/IMG_0002.JPG']
 ```
 
+Scans can be deleted too:
+
+```python
+>>> scanner.delete_scan("/DOXIE/JPEG/IMG_0001.JPG")
+True
+>>> scanner.delete_scans([scan['name'] for scan in scanner.scans])
+True
+```
+
 Other attributes from the API can be queried:
 
 ```python
