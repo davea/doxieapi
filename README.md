@@ -84,3 +84,8 @@ for example:
 [00:11:22:33:44:55]
 password=supersecretpassword
 ```
+
+
+## Credits
+
+Includes [ssdp.py](https://gist.github.com/dankrause/6000248) by [Dan Krause](https://github.com/dankrause).
