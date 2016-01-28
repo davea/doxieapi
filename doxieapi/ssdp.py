@@ -29,20 +29,20 @@ class SSDPResponse(object):
     def __repr__(self):
         return "<SSDPResponse({location}, {st}, {usn})>".format(**self.__dict__)
 
-def discover(service, timeout=2, retries=1):
+def discover(service, timeout=2, retries=1, mx=3):
     group = ("239.255.255.250", 1900)
     message = "\r\n".join([
         'M-SEARCH * HTTP/1.1',
         'HOST: {0}:{1}',
         'MAN: "ssdp:discover"',
-        'ST: {st}','MX: 3','',''])
-    socket.setdefaulttimeout(timeout)
+        'ST: {st}','MX: {mx}','',''])
+    socket.setdefaulttimeout(max(timeout, mx))
     responses = {}
     for _ in range(retries):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
-        sock.sendto(message.format(*group, st=service).encode(), group)
+        sock.sendto(message.format(*group, st=service, mx=mx).encode(), group)
         while True:
             try:
                 response = SSDPResponse(sock)
