@@ -68,7 +68,7 @@ class DoxieScanner:
         SSDP.
         """
         doxies = []
-        for response in ssdp.discover(DOXIE_SSDP_SERVICE):
+        for response in ssdp.discover(DOXIE_SSDP_SERVICE, mx=1, retries=3):
             scheme, netloc, _, _, _, _ = urlparse(response.location)
             url = urlunparse((scheme, netloc, '/', '', '', ''))
             doxies.append(DoxieScanner(url))
