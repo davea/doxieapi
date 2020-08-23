@@ -20,4 +20,5 @@ setup(
     license = "LICENSE.txt",
     keywords = "doxie document scanner",
     url = "https://github.com/davea/doxieapi/",
+    python_requires = ">=3.4",
 )

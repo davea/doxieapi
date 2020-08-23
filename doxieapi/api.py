@@ -1,15 +1,8 @@
 import os
 import time
 import json
-try:
-    from configparser import ConfigParser
-except ImportError:
-    # We're on Python 2
-    from ConfigParser import ConfigParser
-try:
-    from urllib.parse import urlparse, urlunparse, urljoin
-except ImportError:
-    from urlparse import urlparse, urlunparse, urljoin
+from configparser import ConfigParser
+from urllib.parse import urlparse, urlunparse, urljoin
 
 import requests
 
@@ -146,8 +139,8 @@ class DoxieScanner:
         config.read(config_path)
         try:
             self.password = config[self.mac]['password']
-        except KeyError:
-            raise Exception("Couldn't find password for Doxie {} in {}".format(self.mac, config_path))
+        except KeyError as err:
+            raise Exception("Couldn't find password for Doxie {} in {}".format(self.mac, config_path)) from err
 
     @property
     def firmware(self):

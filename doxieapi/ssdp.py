@@ -13,12 +13,10 @@
 #   limitations under the License.
 
 import socket
-try:
-    from http.client import HTTPResponse
-except ImportError:
-    from httplib import HTTPResponse
+from http.client import HTTPResponse
 
-class SSDPResponse(object):
+
+class SSDPResponse:
     def __init__(self, sock):
         r = HTTPResponse(sock)
         r.begin()
