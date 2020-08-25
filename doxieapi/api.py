@@ -2,6 +2,7 @@ import os
 import time
 import json
 from configparser import ConfigParser
+from http.cookiejar import http2time
 from urllib.parse import urlparse, urlunparse, urljoin
 
 import requests
@@ -206,6 +207,10 @@ class DoxieScanner:
         with open(output_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                 f.write(chunk)
+        # Set file timestamp to that of the file we downloaded
+        timestamp = http2time(response.headers.get('Last-Modified'))
+        os.utime(output_path, (timestamp,)*2)
+
         return output_path
 
     def download_scans(self, output_dir):
