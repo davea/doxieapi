@@ -72,6 +72,8 @@ class DoxieScanner:
         """
         doxies = []
         for response in ssdp.discover(DOXIE_SSDP_SERVICE, mx=1, retries=3):
+            if DOXIE_SSDP_SERVICE not in response.usn:
+                continue  # skip over non-Doxie responses
             scheme, netloc, _, _, _, _ = urlparse(response.location)
             url = urlunparse((scheme, netloc, '/', '', '', ''))
             doxies.append(DoxieScanner(url))
