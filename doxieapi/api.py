@@ -25,6 +25,9 @@ class DoxieScanner:
     username = "doxie" # This is always the same according to API docs
     password = None
 
+    # connection timeout for API requests made to the scanner
+    timeout = 10
+
     # These attributes will be populated by _load_hello_attributes
     model = None
     name = None
@@ -101,7 +104,7 @@ class DoxieScanner:
         Checks that the response status code is 200 before
         returning the response.
         """
-        response = requests.get(url, auth=self._get_auth(), stream=stream)
+        response = requests.get(url, auth=self._get_auth(), stream=stream, timeout=self.timeout)
         if response.status_code != requests.codes.ok:
             response.raise_for_status()
         return response
