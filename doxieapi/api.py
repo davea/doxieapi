@@ -208,8 +208,9 @@ class DoxieScanner:
             for chunk in response.iter_content(chunk_size=DOWNLOAD_CHUNK_SIZE):
                 f.write(chunk)
         # Set file timestamp to that of the file we downloaded
-        timestamp = http2time(response.headers.get('Last-Modified'))
-        os.utime(output_path, (timestamp,)*2)
+        if response.headers.get('Last-Modified'):
+            timestamp = http2time(response.headers.get('Last-Modified'))
+            os.utime(output_path, (timestamp,)*2)
 
         return output_path
 
